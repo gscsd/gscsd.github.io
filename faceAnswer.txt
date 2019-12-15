@@ -1,16 +1,71 @@
 1)、索引失效场景，如何查询索引失效？ 索引的分类
+索引失效场景：
+  1.存在NULL值条件
+  eg:select * from test where id is not null;
+  2.NOT条件(<>、NOT、in、not exists)
+  eg:select * from test where id<>500;
+     select * from test where id in (1,2,3,4,5);
+     select * from test where not in (6,7,8,9,0);
+     select * from test where not exists (select 1 from test_02 where test_02.id=test.id);
+  3.列与列对比(表中两列（id和c_id）都建了单独索引)
+  eg:select * from test where id=c_id;
+  4.条件上包括函数 (to_char、to_date、to_number、trunc、upper)
+  eg:select * from test where upper(name)='SUNYANG';
+  正确eg:select * from test where name=upper('sunyang');
+        --INDEX RANGE SCAN
+  5.LIKE通配符(前匹配的情况下，执行计划会更倾向于选择全表扫描。后匹配可以走 INDEX RANGE SCAN)
+  前匹配：select * from test where name like '%明';
+  后匹配：select * from test where name like 张||'%'; --INDEX RANGE SCAN
+  6.数据类型的转换 （查询条件存在隐式转换时，索引会失效。比如在数据库里id存的number类型）
+  select * from sunyang where id='123';
+  7.谓词运算（+、-、*、/）
+  eg:select * from sunyang where id/2=:type_id;
+  正确eg:select * from sunyang where id=:type_id*2;
+  8。OR语句前后没有同时使用索引
+查询索引失效使用执行计划：explain 
+MySQL索引分类：FULLTEXT，HASH，BTREE，RTREE
 
+从物理存储角度
+1、聚集索引（clustered index）
 
+2、非聚集索引（non-clustered index）
+  
 2)、加密方法  对称加密 非对称加密  MD5 RSA 
 
 
-3)、多线程连接池 框架
+3)、数据库连接池 框架
 
 
 4)、拦截器 使用场景 写法
+Interceptor依赖于web框架，在SpringMVC中就是依赖于SpringMVC框架。在实现上基于Java的反射机制，属于面向切面编程（AOP）的一种运用。
+拦截器可以调用IOC容器中的各种依赖，而过滤器不能，因此可以使用Spring的依赖注入进行一些业务操作，同时一个拦截器实例在一个controller生命周期之内可以多次调用。但是缺点是只能对controller请求进行拦截，对其他的一些比如直接访问静态资源的请求则没办法进行拦截处理。
+在SpringMVC中定义一个拦截器主要有两种方式
+  第一种方式是要实现Spring的HandlerInterceptor接口，或者是其它实现了HandlerInterceptor接口的类，比如HandlerInterceptorAdapter。
+  第二种方式是实现WebRequestInterceptor接口，或者其它实现了WebRequestInterceptor的类
+
 
 
 5)、过滤器 使用场景 写法
+Filter依赖于servlet容器，实现基于函数回调，可以对几乎所有请求进行过滤，但是缺点是一个过滤器实例只能在容器初始化时调用一次。
+Filter随web应用的启动而启动，只初始化一次，随web应用的停止而销毁。
+1.启动服务器时加载过滤器的实例，并调用init()方法来初始化实例；
+2.每一次请求时都只调用方法doFilter()进行处理；
+3.停止服务器时调用destroy()方法，销毁实例。
+使用场景：
+a.登录权限验证
+b.资源访问权限控制
+c.敏感词汇过滤
+d.字符编码转换
+web.xml中配置过滤器，这里要谨记一条原则：监听器>过滤器>servlet
+在doFilter()方法中，chain.doFilter()前一般是对request执行的过滤操作，chain.doFilter后代码一般是对response执行的操作。
+
+Filter和HandlerInterceptor的区别
+1.拦截器是基于java的反射机制的，而过滤器是基于函数回调。
+2.拦截器不依赖与servlet容器，过滤器依赖与servlet容器。
+3.拦截器只能对Controller请求起作用，而过滤器则可以对几乎所有的请求起作用。
+4.拦截器可以访问Controller上下文、值栈里的对象，而过滤器不能访问。
+5.在Controller的生命周期中，拦截器可以多次被调用，而过滤器只能在容器初始化时被调用一次。
+6.拦截器可以获取IOC容器中的各个bean，而过滤器就不行，这点很重要，在拦截器里注入一个service，可以调用业务逻辑。
 
 
 6)、sql注入  如何防止注入  mybatis防止sql注入的原理
@@ -38,6 +93,7 @@
 
 
 14）、spring的核心机制  IOC\DI AOP
+
 
 15)、hibernate的生命周期
 
